@@ -20,6 +20,9 @@ type mockSessionAgent struct {
 }
 
 func (m *mockSessionAgent) Run(ctx context.Context, call SessionAgentCall) (*unillm.AgentResult, error) {
+	if m.runFunc == nil {
+		return nil, errors.New("mock runFunc not set")
+	}
 	return m.runFunc(ctx, call)
 }
 
@@ -166,7 +169,7 @@ func TestRunSubAgent(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("provider not configured", func(t *testing.T) {
+	t.Run("provider not configured is ignored", func(t *testing.T) {
 		env := testEnv(t)
 		coord := newTestCoordinator(t, env, providerID, providerCfg)
 
@@ -174,9 +177,11 @@ func TestRunSubAgent(t *testing.T) {
 		require.NoError(t, err)
 
 		// Agent references a provider that doesn't exist in config.
-		agent := newMockAgent("unknown-provider", 4096, nil)
+		agent := newMockAgent("unknown-provider", 4096, func(_ context.Context, _ SessionAgentCall) (*unillm.AgentResult, error) {
+			return agentResultWithText("ok"), nil
+		})
 
-		_, err = coord.runSubAgent(t.Context(), subAgentParams{
+		resp, err := coord.runSubAgent(t.Context(), subAgentParams{
 			Agent:          agent,
 			SessionID:      parentSession.ID,
 			AgentMessageID: "msg-1",
@@ -184,8 +189,8 @@ func TestRunSubAgent(t *testing.T) {
 			Prompt:         "test",
 			SessionTitle:   "Test",
 		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "model provider not configured")
+		require.NoError(t, err)
+		assert.Equal(t, "ok", resp.Content)
 	})
 
 	t.Run("agent run error returns error response", func(t *testing.T) {
