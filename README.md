@@ -532,32 +532,29 @@ API. Don't forget to set `DEEPSEEK_API_KEY` in your environment.
 }
 ```
 
-#### Anthropic-Compatible APIs
+#### OpenAI-Compatible APIs
 
-Custom Anthropic-compatible providers follow this format:
+Custom OpenAI-compatible providers follow this format:
 
 ```json
 {
   "$schema": "https://charm.land/crush.json",
   "providers": {
-    "custom-anthropic": {
-      "type": "anthropic",
-      "base_url": "https://api.anthropic.com/v1",
-      "api_key": "$ANTHROPIC_API_KEY",
-      "extra_headers": {
-        "anthropic-version": "2023-06-01"
-      },
+    "custom-openai-compat": {
+      "type": "openai-compat",
+      "base_url": "https://api.example.com/v1",
+      "api_key": "$OPENAI_COMPAT_API_KEY",
       "models": [
         {
-          "id": "claude-sonnet-4-20250514",
-          "name": "Claude Sonnet 4",
-          "cost_per_1m_in": 3,
-          "cost_per_1m_out": 15,
-          "cost_per_1m_in_cached": 3.75,
-          "cost_per_1m_out_cached": 0.3,
-          "context_window": 200000,
-          "default_max_tokens": 50000,
-          "can_reason": true,
+          "id": "my-model",
+          "name": "My Model",
+          "cost_per_1m_in": 1,
+          "cost_per_1m_out": 5,
+          "cost_per_1m_in_cached": 0.2,
+          "cost_per_1m_out_cached": 0.2,
+          "context_window": 128000,
+          "default_max_tokens": 4000,
+          "can_reason": false,
           "supports_attachments": true
         }
       ]
