@@ -7,6 +7,11 @@ on:
     tags:
       - v*.*.*
 
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
 concurrency:
   group: goreleaser
   cancel-in-progress: true
