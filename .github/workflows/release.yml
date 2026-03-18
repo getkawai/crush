@@ -53,11 +53,16 @@ jobs:
         run: |
           git config --global url."https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
       - name: Build Linux AMD64
         env:
           GOOS: linux
           GOARCH: amd64
-          CGO_ENABLED: 0
+          CGO_ENABLED: 1
         run: |
           BUILD_REF="${GITHUB_SHA::7}"
           mkdir -p bin
@@ -102,7 +107,7 @@ jobs:
         env:
           GOOS: darwin
           GOARCH: arm64
-          CGO_ENABLED: 0
+          CGO_ENABLED: 1
         run: |
           BUILD_REF="${GITHUB_SHA::7}"
           mkdir -p bin
