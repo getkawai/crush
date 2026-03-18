@@ -125,51 +125,6 @@ jobs:
             bin/kawaicode-build-*.tar.gz
             bin/checksums-darwin-*.txt
 
-  build-windows:
-    if: github.event_name != 'workflow_dispatch'
-    name: Build Windows
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Configure Git for private modules
-        if: ${{ env.GH_TOKEN_VALUE != '' }}
-        run: |
-          git config --global url."https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
-
-      - name: Build Windows AMD64
-        shell: powershell
-        env:
-          GOOS: windows
-          GOARCH: amd64
-          CGO_ENABLED: 0
-        run: |
-          $BUILD_REF = "${{ github.sha }}".Substring(0,7)
-          New-Item -ItemType Directory -Force -Path bin | Out-Null
-          go build -ldflags "-s -w -X github.com/charmbracelet/crush/internal/version.Version=build-$BUILD_REF" -o bin/kawaicode.exe .
-
-      - name: Create distribution archive
-        run: |
-          cd bin
-          $BUILD_REF = "${{ github.sha }}".Substring(0,7)
-          $ARCHIVE = "kawaicode-build-${BUILD_REF}-windows-amd64.zip"
-          Compress-Archive -Path kawaicode.exe -DestinationPath $ARCHIVE
-          Get-FileHash -Algorithm SHA256 $ARCHIVE | ForEach-Object { "$($_.Hash.ToLower())  $((Split-Path -Leaf $_.Path))" } | Out-File -Encoding ASCII checksums-windows-amd64.txt
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-build
-          retention-days: 30
-          path: |
-            bin/kawaicode-build-*.zip
-            bin/checksums-windows-amd64.txt
 
   release:
     if: github.event_name == 'workflow_dispatch'
@@ -213,14 +168,6 @@ jobs:
           name: darwin-build-arm64
           path: artifacts/darwin
 
-      - name: Download Windows build artifacts
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          github_token: ${{ secrets.GH_TOKEN }}
-          run_id: ${{ steps.resolve_run.outputs.run_id }}
-          name: windows-build
-          path: artifacts/windows
-
       - name: Prepare release assets
         env:
           VERSION: ${{ inputs.version }}
@@ -230,7 +177,6 @@ jobs:
 
           cp artifacts/linux/kawaicode-build-*-linux-amd64.tar.gz "release-assets/kawaicode-${VERSION}-linux-amd64.tar.gz"
           cp artifacts/darwin/kawaicode-build-*-darwin-arm64.tar.gz "release-assets/kawaicode-${VERSION}-darwin-arm64.tar.gz"
-          cp artifacts/windows/kawaicode-build-*-windows-amd64.zip "release-assets/kawaicode-${VERSION}-windows-amd64.zip"
 
           (
             cd release-assets
@@ -252,12 +198,10 @@ jobs:
             ### Downloads
             - Linux AMD64: `kawaicode-${{ inputs.version }}-linux-amd64.tar.gz`
             - macOS ARM64: `kawaicode-${{ inputs.version }}-darwin-arm64.tar.gz`
-            - Windows AMD64: `kawaicode-${{ inputs.version }}-windows-amd64.zip`
             - Checksums: `checksums.txt`
           files: |
             release-assets/kawaicode-${{ inputs.version }}-linux-amd64.tar.gz
             release-assets/kawaicode-${{ inputs.version }}-darwin-arm64.tar.gz
-            release-assets/kawaicode-${{ inputs.version }}-windows-amd64.zip
             release-assets/checksums.txt
 
       - name: Upload release assets to Cloudflare R2
