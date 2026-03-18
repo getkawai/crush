@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 1
       - id: check
         env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GH_TOKEN: "${{ secrets.GH_TOKEN }}"
         run: |
           if gh run list --workflow nightly.yml -c $(git rev-parse HEAD) -s success | grep 'completed'; then
             echo "should_run=false" >> $GITHUB_OUTPUT
