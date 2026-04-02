@@ -103,7 +103,9 @@ func (m *Tool) Run(ctx context.Context, params unillm.ToolCall) (unillm.ToolResp
 	}
 
 	// Skip permission for whitelisted Docker MCP tools.
-	if !slices.Contains(whitelistDockerTools, params.Name) {
+	// Use the bound tool's actual name (m.Name()) instead of caller-supplied params.Name
+	// to prevent permission bypass via manipulated params.Name.
+	if !slices.Contains(whitelistDockerTools, m.Name()) {
 		permissionDescription := fmt.Sprintf("execute %s with the following parameters:", m.Info().Name)
 		p, err := m.permissions.Request(ctx,
 			permission.CreatePermissionRequest{

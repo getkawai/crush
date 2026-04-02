@@ -1,6 +1,7 @@
 package fsext
 
 import (
+	"cmp"
 	"errors"
 	"log/slog"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/charlievieth/fastwalk"
 	"github.com/charmbracelet/crush/internal/csync"
 	"github.com/charmbracelet/crush/internal/home"
+	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 )
 
@@ -85,13 +87,20 @@ var gitGlobalIgnorePatterns = sync.OnceValue(func() []gitignore.Pattern {
 	cfg, err := gitconfig.LoadConfig(gitconfig.GlobalScope)
 	if err != nil {
 		slog.Debug("Failed to load global git config", "error", err)
-		return nil
+		// Fall through to use default path
 	}
 
-	excludesFilePath := cmp.Or(
-		cfg.Raw.Section("core").Options.Get("excludesfile"),
-		filepath.Join(home.Config(), "git", "ignore"),
-	)
+	// Get excludes file path from config, or use default fallback.
+	// cfg may be nil if LoadConfig failed, so handle that safely.
+	var excludesFilePath string
+	if cfg != nil {
+		excludesFilePath = cmp.Or(
+			cfg.Raw.Section("core").Options.Get("excludesfile"),
+			filepath.Join(home.Config(), "git", "ignore"),
+		)
+	} else {
+		excludesFilePath = filepath.Join(home.Config(), "git", "ignore")
+	}
 	excludesFilePath = home.Long(excludesFilePath)
 
 	bts, err := os.ReadFile(excludesFilePath)
@@ -109,6 +118,7 @@ var gitGlobalIgnorePatterns = sync.OnceValue(func() []gitignore.Pattern {
 // ~/.config/kawai/ignore file.
 var kawaiGlobalIgnorePatterns = sync.OnceValue(func() []gitignore.Pattern {
 	name := filepath.Join(home.Config(), "kawai", "ignore")
+	name = home.Long(name)
 	bts, err := os.ReadFile(name)
 	if err != nil {
 		if !os.IsNotExist(err) {
