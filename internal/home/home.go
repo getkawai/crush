@@ -21,6 +21,17 @@ func Dir() string {
 	return homedir
 }
 
+// Config returns the user config directory.
+func Config() string {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return xdg
+	}
+	if home := Dir(); home != "" {
+		return filepath.Join(home, ".config")
+	}
+	return ""
+}
+
 // Short replaces the actual home path from [Dir] with `~`.
 func Short(p string) string {
 	if homedir == "" || !strings.HasPrefix(p, homedir) {

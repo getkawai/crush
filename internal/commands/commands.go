@@ -90,22 +90,19 @@ func LoadMCPPrompts() ([]MCPPrompt, error) {
 }
 
 func buildCommandSources(cfg *config.Config) []commandSource {
-	var sources []commandSource
-
-	// XDG config directory
-	if dir := getXDGCommandsDir(); dir != "" {
-		sources = append(sources, commandSource{
-			path:   dir,
-			prefix: userCommandPrefix,
-		})
+	sources := []commandSource{
+		{
+			path:   filepath.Join(cfg.Options.DataDirectory, "commands"),
+			prefix: projectCommandPrefix,
+		},
 	}
-
-	// Project directory
-	sources = append(sources, commandSource{
-		path:   filepath.Join(cfg.Options.DataDirectory, "commands"),
-		prefix: projectCommandPrefix,
-	})
-
+	// Only add user command source if config directory is available
+	if cfgPath := home.Config(); cfgPath != "" {
+		sources = append([]commandSource{{
+			path:   filepath.Join(cfgPath, "kawai", "commands"),
+			prefix: userCommandPrefix,
+		}}, sources...)
+	}
 	return sources
 }
 
@@ -122,8 +119,8 @@ func loadAll(sources []commandSource) ([]CustomCommand, error) {
 }
 
 func loadFromSource(source commandSource) ([]CustomCommand, error) {
-	if err := ensureDir(source.path); err != nil {
-		return nil, err
+	if _, err := os.Stat(source.path); os.IsNotExist(err) {
+		return nil, nil
 	}
 
 	var commands []CustomCommand
@@ -195,33 +192,12 @@ func buildCommandID(path, baseDir, prefix string) string {
 	return prefix + strings.Join(parts, ":")
 }
 
-func getXDGCommandsDir() string {
-	xdgHome := os.Getenv("XDG_CONFIG_HOME")
-	if xdgHome == "" {
-		if home := home.Dir(); home != "" {
-			xdgHome = filepath.Join(home, ".config")
-		}
-	}
-	if xdgHome != "" {
-		return filepath.Join(xdgHome, "crush", "commands")
-	}
-	return ""
-}
-
-func ensureDir(path string) error {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return os.MkdirAll(path, 0o755)
-	}
-	return nil
-}
-
 func isMarkdownFile(name string) bool {
 	return strings.HasSuffix(strings.ToLower(name), ".md")
 }
 
-func GetMCPPrompt(cfg *config.ConfigStore, clientID, promptID string, args map[string]string) (string, error) {
-	// TODO: we should pass the context down
-	result, err := mcp.GetPromptMessages(context.Background(), cfg, clientID, promptID, args)
+func GetMCPPrompt(ctx context.Context, cfg *config.ConfigStore, clientID, promptID string, args map[string]string) (string, error) {
+	result, err := mcp.GetPromptMessages(ctx, cfg, clientID, promptID, args)
 	if err != nil {
 		return "", err
 	}
